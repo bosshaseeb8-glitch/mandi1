@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mandi-1 — Order Board</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Roboto+Mono:wght@400;500;700&display=swap');
+
+  :root{
+    --bg: #17130f;
+    --panel: #221c16;
+    --panel-2: #2a221a;
+    --line: #3a3026;
+    --amber: #f0a238;
+    --red: #e15a4f;
+    --red-glow: #e15a4f55;
+    --green: #4caf7d;
+    --text: #f2ece2;
+    --text-dim: #a89a86;
+    --text-mute: #6b5f50;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{ background: var(--bg); color: var(--text); font-family: 'Archivo', sans-serif; min-height: 100vh; padding: 20px 20px 60px; }
+  header{ display:flex; align-items:center; justify-content:space-between; padding-bottom: 18px; margin-bottom: 22px; border-bottom: 2px solid var(--line); flex-wrap: wrap; gap: 14px; }
+  .brand{ display:flex; align-items:baseline; gap: 12px; }
+  .brand h1{ font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
+  .brand span{ font-family:'Roboto Mono', monospace; font-size:12px; color: var(--text-mute); letter-spacing: 0.08em; }
+  .status{ display:flex; align-items:center; gap: 10px; font-family:'Roboto Mono', monospace; font-size: 13px; color: var(--text-dim); }
+  .dot{ width:9px; height:9px; border-radius:50%; background: var(--green); }
+  .dot.offline{ background: var(--red); }
+  .count-pill{ background: var(--red); color: #1a0f0c; font-weight: 800; font-size: 15px; padding: 6px 14px; border-radius: 999px; display:none; }
+  .count-pill.show{ display:inline-block; }
+  .empty{ text-align:center; padding: 90px 20px; color: var(--text-mute); }
+  .empty .big{ font-size: 44px; margin-bottom: 10px; }
+  .empty p{ font-family:'Roboto Mono', monospace; font-size: 13px; letter-spacing:0.04em; }
+  .orders{ display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .card{ background: var(--panel); border: 2px solid var(--red); border-radius: 14px; padding: 18px 18px 16px; box-shadow: 0 0 0 4px var(--red-glow); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse{ 0%, 100%{ box-shadow: 0 0 0 4px var(--red-glow); } 50%{ box-shadow: 0 0 0 10px transparent; } }
+  .card-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px; }
+  .order-id{ font-family:'Roboto Mono', monospace; font-weight:700; font-size: 15px; color: var(--amber); }
+  .elapsed{ font-family:'Roboto Mono', monospace; font-size: 12px; color: var(--text-mute); }
+  .customer{ font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .summary{ font-size: 13.5px; color: var(--text-dim); line-height: 1.5; margin-bottom: 12px; }
+  .meta-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px; }
+  .price{ font-family:'Roboto Mono', monospace; font-weight:700; font-size: 17px; color: var(--text); }
+  .source{ font-family:'Roboto Mono', monospace; font-size: 10.5px; text-transform:uppercase; letter-spacing: 0.08em; color: var(--text-mute); background: var(--panel-2); padding: 3px 8px; border-radius: 5px; }
+  .ack-btn{ width:100%; padding: 12px; border-radius: 9px; border: none; background: var(--green); color: #0e1f16; font-weight: 800; font-size: 14.5px; letter-spacing: 0.02em; cursor:pointer; font-family:'Archivo', sans-serif; transition: transform 0.08s ease, opacity 0.15s ease; }
+  .ack-btn:hover{ opacity: 0.9; }
+  .ack-btn:active{ transform: scale(0.98); }
+  .ack-btn:disabled{ opacity: 0.5; cursor: default; }
+  .setup{ max-width: 640px; margin: 40px auto; background: var(--panel); border:1px solid var(--line); border-radius: 12px; padding: 24px 26px; font-family:'Roboto Mono', monospace; font-size: 13px; color: var(--text-dim); line-height: 1.7; }
+  .setup h2{ font-family:'Archivo',sans-serif; color: var(--text); font-size:16px; margin-bottom:10px; }
+  .setup input{ width:100%; background: var(--panel-2); border:1px solid var(--line); color: var(--text); padding: 9px 11px; border-radius: 7px; font-family:'Roboto Mono', monospace; font-size: 12.5px; margin: 6px 0 14px; }
+  .setup button{ background: var(--amber); color: #241705; border:none; padding: 10px 18px; border-radius: 7px; font-weight:800; font-family:'Archivo',sans-serif; cursor:pointer; font-size:13.5px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>MANDI-1</h1>
+    <span>ORDER BOARD</span>
+  </div>
+  <div class="status">
+    <span class="count-pill" id="countPill">0 NEW</span>
+    <span class="dot" id="statusDot"></span>
+    <span id="statusText">connecting…</span>
+  </div>
+</header>
+
+<div id="setupScreen" class="setup" style="display:none;">
+  <h2>One-time setup</h2>
+  <p>Paste your two n8n webhook URLs below (from the "Staff Dashboard — n8n Backend" guide), then click Save. This is stored only in this browser.</p>
+  <label>Pending orders URL (GET)</label>
+  <input id="urlPending" placeholder="https://yourinstance.app.n8n.cloud/webhook/mandi1-pending-orders">
+  <label>Acknowledge order URL (POST)</label>
+  <input id="urlAck" placeholder="https://yourinstance.app.n8n.cloud/webhook/mandi1-acknowledge-order">
+  <button onclick="saveConfig()">Save & Start</button>
+</div>
+
+<div id="emptyState" class="empty" style="display:none;">
+  <div class="big">✓</div>
+  <p>NO PENDING ORDERS</p>
+</div>
+
+<div class="orders" id="ordersGrid"></div>
+
+<script>
+  const POLL_INTERVAL_MS = 5000;
+  let PENDING_URL = localStorage.getItem('mandi1_pending_url') || '';
+  let ACK_URL = localStorage.getItem('mandi1_ack_url') || '';
+  let beeping = false;
+  let audioCtx = null;
+  let beepInterval = null;
+
+  function initAudio(){
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+
+  function playBeepOnce(){
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.35);
+  }
+
+  function startBeeping(){
+    if (beeping) return;
+    beeping = true;
+    playBeepOnce();
+    beepInterval = setInterval(playBeepOnce, 1800);
+  }
+
+  function stopBeeping(){
+    beeping = false;
+    if (beepInterval) clearInterval(beepInterval);
+    beepInterval = null;
+  }
+
+  function saveConfig(){
+    PENDING_URL = document.getElementById('urlPending').value.trim();
+    ACK_URL = document.getElementById('urlAck').value.trim();
+    localStorage.setItem('mandi1_pending_url', PENDING_URL);
+    localStorage.setItem('mandi1_ack_url', ACK_URL);
+    document.getElementById('setupScreen').style.display = 'none';
+    initAudio();
+    fetchOrders();
+  }
+
+  function elapsedText(timestamp){
+    const then = new Date(timestamp).getTime();
+    const mins = Math.max(0, Math.floor((Date.now() - then) / 60000));
+    if (mins < 1) return 'just now';
+    if (mins === 1) return '1 min ago';
+    return mins + ' min ago';
+  }
+
+  async function ackOrder(orderId, btn){
+    btn.disabled = true;
+    btn.textContent = 'Marking…';
+    try{
+      await fetch(ACK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId })
+      });
+      fetchOrders();
+    }catch(e){
+      btn.disabled = false;
+      btn.textContent = 'Acknowledge — try again';
+    }
+  }
+
+  function render(orders){
+    const grid = document.getElementById('ordersGrid');
+    const empty = document.getElementById('emptyState');
+    const pill = document.getElementById('countPill');
+
+    if (!orders || orders.length === 0){
+      grid.innerHTML = '';
+      empty.style.display = 'block';
+      pill.classList.remove('show');
+      stopBeeping();
+      return;
+    }
+
+    empty.style.display = 'none';
+    pill.classList.add('show');
+    pill.textContent = orders.length + ' NEW';
+    startBeeping();
+
+    grid.innerHTML = orders.map(o => `
+      <div class="card">
+        <div class="card-top">
+          <span class="order-id">${o['Order ID'] || ''}</span>
+          <span class="elapsed">${elapsedText(o['Timestamp'])}</span>
+        </div>
+        <div class="customer">${o['Customer Name'] || 'Customer'}</div>
+        <div class="summary">${o['Order Summary'] || ''}</div>
+        <div class="meta-row">
+          <span class="price">$${o['Total Price'] || '0'}</span>
+          <span class="source">${o['Source'] || ''}</span>
+        </div>
+        <button class="ack-btn" onclick="ackOrder('${o['Order ID']}', this)">Acknowledge</button>
+      </div>
+    `).join('');
+  }
+
+  async function fetchOrders(){
+    const dot = document.getElementById('statusDot');
+    const txt = document.getElementById('statusText');
+    try{
+      const res = await fetch(PENDING_URL + '?t=' + Date.now(), { cache: 'no-store' });
+      const data = await res.json();
+      dot.classList.remove('offline');
+      txt.textContent = 'live';
+      render(data.orders || []);
+    }catch(e){
+      dot.classList.add('offline');
+      txt.textContent = 'connection lost';
+    }
+  }
+
+  window.addEventListener('click', () => { if (!audioCtx) initAudio(); }, { once: true });
+
+  if (!PENDING_URL || !ACK_URL){
+    document.getElementById('setupScreen').style.display = 'block';
+    document.getElementById('urlPending').value = PENDING_URL;
+    document.getElementById('urlAck').value = ACK_URL;
+  } else {
+    fetchOrders();
+  }
+
+  setInterval(() => { if (PENDING_URL) fetchOrders(); }, POLL_INTERVAL_MS);
+</script>
+
+</body>
+</html>

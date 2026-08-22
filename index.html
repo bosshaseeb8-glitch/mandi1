@@ -179,7 +179,7 @@
     grid.innerHTML = orders.map(o => `
       <div class="card">
         <div class="card-top">
-          <span class="order-id">${o['Order ID'] || ''}</span>
+          <span class="order-id">${o['Order id'] || ''}</span>
           <span class="elapsed">${elapsedText(o['Timestamp'])}</span>
         </div>
         <div class="customer">${o['Customer Name'] || 'Customer'}</div>
@@ -188,7 +188,7 @@
           <span class="price">$${o['Total Price'] || '0'}</span>
           <span class="source">${o['Source'] || ''}</span>
         </div>
-        <button class="ack-btn" onclick="ackOrder('${o['Order ID']}', this)">Acknowledge</button>
+        <button class="ack-btn" onclick="ackOrder('${o['Order id']}', this)">Acknowledge</button>
       </div>
     `).join('');
   }

@@ -26,11 +26,14 @@
   .brand{ display:flex; align-items:baseline; gap: 12px; }
   .brand h1{ font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
   .brand span{ font-family:'Roboto Mono', monospace; font-size:12px; color: var(--text-mute); letter-spacing: 0.08em; }
+  .right-controls{ display:flex; align-items:center; gap: 16px; flex-wrap: wrap; }
   .status{ display:flex; align-items:center; gap: 10px; font-family:'Roboto Mono', monospace; font-size: 13px; color: var(--text-dim); }
   .dot{ width:9px; height:9px; border-radius:50%; background: var(--green); }
   .dot.offline{ background: var(--red); }
   .count-pill{ background: var(--red); color: #1a0f0c; font-weight: 800; font-size: 15px; padding: 6px 14px; border-radius: 999px; display:none; }
   .count-pill.show{ display:inline-block; }
+  .add-btn{ background: var(--amber); color: #241705; border:none; padding: 10px 18px; border-radius: 8px; font-weight: 800; font-size: 14px; cursor:pointer; font-family:'Archivo', sans-serif; }
+  .add-btn:hover{ opacity: 0.9; }
   .empty{ text-align:center; padding: 90px 20px; color: var(--text-mute); }
   .empty .big{ font-size: 44px; margin-bottom: 10px; }
   .empty p{ font-family:'Roboto Mono', monospace; font-size: 13px; letter-spacing:0.04em; }
@@ -53,6 +56,17 @@
   .setup h2{ font-family:'Archivo',sans-serif; color: var(--text); font-size:16px; margin-bottom:10px; }
   .setup input{ width:100%; background: var(--panel-2); border:1px solid var(--line); color: var(--text); padding: 9px 11px; border-radius: 7px; font-family:'Roboto Mono', monospace; font-size: 12.5px; margin: 6px 0 14px; }
   .setup button{ background: var(--amber); color: #241705; border:none; padding: 10px 18px; border-radius: 7px; font-weight:800; font-family:'Archivo',sans-serif; cursor:pointer; font-size:13.5px; }
+
+  .modal-overlay{ position:fixed; inset:0; background: rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index: 100; padding: 20px; }
+  .modal-overlay.show{ display:flex; }
+  .modal{ background: var(--panel); border:1px solid var(--line); border-radius: 14px; padding: 26px 26px 22px; width:100%; max-width: 420px; }
+  .modal h2{ font-size:18px; margin-bottom: 16px; }
+  .modal label{ display:block; font-family:'Roboto Mono', monospace; font-size: 12px; color: var(--text-dim); margin-bottom: 6px; margin-top: 14px; }
+  .modal input, .modal textarea{ width:100%; background: var(--panel-2); border:1px solid var(--line); color: var(--text); padding: 10px 12px; border-radius: 8px; font-family:'Archivo', sans-serif; font-size: 14px; resize: vertical; }
+  .modal textarea{ min-height: 70px; }
+  .modal-actions{ display:flex; gap: 10px; margin-top: 22px; }
+  .btn-primary{ flex:1; background: var(--amber); color: #241705; border:none; padding: 12px; border-radius: 9px; font-weight:800; cursor:pointer; font-family:'Archivo',sans-serif; font-size: 14px; }
+  .btn-secondary{ flex:1; background: transparent; color: var(--text-dim); border:1px solid var(--line); padding: 12px; border-radius: 9px; font-weight:700; cursor:pointer; font-family:'Archivo',sans-serif; font-size: 14px; }
 </style>
 </head>
 <body>
@@ -62,20 +76,25 @@
     <h1>MANDI-1</h1>
     <span>ORDER BOARD</span>
   </div>
-  <div class="status">
+  <div class="right-controls">
+    <button class="add-btn" onclick="openWalkinModal()">+ Walk-in Order</button>
     <span class="count-pill" id="countPill">0 NEW</span>
-    <span class="dot" id="statusDot"></span>
-    <span id="statusText">connecting…</span>
+    <div class="status">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">connecting…</span>
+    </div>
   </div>
 </header>
 
 <div id="setupScreen" class="setup" style="display:none;">
   <h2>One-time setup</h2>
-  <p>Paste your two n8n webhook URLs below (from the "Staff Dashboard — n8n Backend" guide), then click Save. This is stored only in this browser.</p>
+  <p>Paste your three n8n webhook URLs below, then click Save. Stored only in this browser.</p>
   <label>Pending orders URL (GET)</label>
-  <input id="urlPending" placeholder="https://yourinstance.app.n8n.cloud/webhook/mandi1-pending-orders">
+  <input id="urlPending" placeholder="https://yourinstance.app.n8n.cloud/webhook/mandi-1-pending-orders">
   <label>Acknowledge order URL (POST)</label>
   <input id="urlAck" placeholder="https://yourinstance.app.n8n.cloud/webhook/mandi1-acknowledge-order">
+  <label>Place order URL (POST) — same one ElevenLabs uses</label>
+  <input id="urlOrders" placeholder="https://yourinstance.app.n8n.cloud/webhook/mandi1-orders">
   <button onclick="saveConfig()">Save & Start</button>
 </div>
 
@@ -86,10 +105,27 @@
 
 <div class="orders" id="ordersGrid"></div>
 
+<div class="modal-overlay" id="walkinModal">
+  <div class="modal">
+    <h2>Add Walk-in Order</h2>
+    <label>Customer Name</label>
+    <input id="wiName" placeholder="e.g. Walk-in Customer">
+    <label>Order Summary</label>
+    <textarea id="wiSummary" placeholder="e.g. 2 x Lamb Mandi Meal, 1 x Butter Naan"></textarea>
+    <label>Total Price (AUD)</label>
+    <input id="wiPrice" type="number" step="0.01" placeholder="e.g. 70">
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeWalkinModal()">Cancel</button>
+      <button class="btn-primary" id="wiSubmitBtn" onclick="submitWalkin()">Add Order</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const POLL_INTERVAL_MS = 5000;
   let PENDING_URL = localStorage.getItem('mandi1_pending_url') || '';
   let ACK_URL = localStorage.getItem('mandi1_ack_url') || '';
+  let ORDERS_URL = localStorage.getItem('mandi1_orders_url') || '';
   let beeping = false;
   let audioCtx = null;
   let beepInterval = null;
@@ -127,8 +163,10 @@
   function saveConfig(){
     PENDING_URL = document.getElementById('urlPending').value.trim();
     ACK_URL = document.getElementById('urlAck').value.trim();
+    ORDERS_URL = document.getElementById('urlOrders').value.trim();
     localStorage.setItem('mandi1_pending_url', PENDING_URL);
     localStorage.setItem('mandi1_ack_url', ACK_URL);
+    localStorage.setItem('mandi1_orders_url', ORDERS_URL);
     document.getElementById('setupScreen').style.display = 'none';
     initAudio();
     fetchOrders();
@@ -156,6 +194,50 @@
       btn.disabled = false;
       btn.textContent = 'Acknowledge — try again';
     }
+  }
+
+  function openWalkinModal(){
+    document.getElementById('walkinModal').classList.add('show');
+  }
+  function closeWalkinModal(){
+    document.getElementById('walkinModal').classList.remove('show');
+    document.getElementById('wiName').value = '';
+    document.getElementById('wiSummary').value = '';
+    document.getElementById('wiPrice').value = '';
+  }
+
+  async function submitWalkin(){
+    const btn = document.getElementById('wiSubmitBtn');
+    const name = document.getElementById('wiName').value.trim() || 'Walk-in Customer';
+    const summary = document.getElementById('wiSummary').value.trim();
+    const price = document.getElementById('wiPrice').value.trim();
+
+    if (!summary || !price){
+      alert('Please fill in the order summary and total price.');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Adding…';
+    try{
+      await fetch(ORDERS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'place_order',
+          customer_name: name,
+          order_summary: summary,
+          total_price: price,
+          source: 'Walk-in'
+        })
+      });
+      closeWalkinModal();
+      fetchOrders();
+    }catch(e){
+      alert('Could not submit the order. Check connection and try again.');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Add Order';
   }
 
   function render(orders){
@@ -210,10 +292,11 @@
 
   window.addEventListener('click', () => { if (!audioCtx) initAudio(); }, { once: true });
 
-  if (!PENDING_URL || !ACK_URL){
+  if (!PENDING_URL || !ACK_URL || !ORDERS_URL){
     document.getElementById('setupScreen').style.display = 'block';
     document.getElementById('urlPending').value = PENDING_URL;
     document.getElementById('urlAck').value = ACK_URL;
+    document.getElementById('urlOrders').value = ORDERS_URL;
   } else {
     fetchOrders();
   }

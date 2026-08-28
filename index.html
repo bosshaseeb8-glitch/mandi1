@@ -48,6 +48,11 @@
   .meta-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px; }
   .price{ font-family:'Roboto Mono', monospace; font-weight:700; font-size: 17px; color: var(--text); }
   .source{ font-family:'Roboto Mono', monospace; font-size: 10.5px; text-transform:uppercase; letter-spacing: 0.08em; color: var(--text-mute); background: var(--panel-2); padding: 3px 8px; border-radius: 5px; }
+  .badge-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 10px; }
+  .badge{ font-family:'Roboto Mono', monospace; font-size: 10.5px; font-weight:700; text-transform:uppercase; letter-spacing: 0.06em; padding: 4px 9px; border-radius: 5px; }
+  .badge.pickup{ background: #f0a23822; color: var(--amber); border: 1px solid #f0a23855; }
+  .badge.dinein{ background: #4caf7d22; color: var(--green); border: 1px solid #4caf7d55; }
+  .phone-line{ font-family:'Roboto Mono', monospace; font-size: 12.5px; color: var(--text-dim); margin-bottom: 4px; }
   .ack-btn{ width:100%; padding: 12px; border-radius: 9px; border: none; background: var(--green); color: #0e1f16; font-weight: 800; font-size: 14.5px; letter-spacing: 0.02em; cursor:pointer; font-family:'Archivo', sans-serif; transition: transform 0.08s ease, opacity 0.15s ease; }
   .ack-btn:hover{ opacity: 0.9; }
   .ack-btn:active{ transform: scale(0.98); }
@@ -62,7 +67,7 @@
   .modal{ background: var(--panel); border:1px solid var(--line); border-radius: 14px; padding: 26px 26px 22px; width:100%; max-width: 420px; }
   .modal h2{ font-size:18px; margin-bottom: 16px; }
   .modal label{ display:block; font-family:'Roboto Mono', monospace; font-size: 12px; color: var(--text-dim); margin-bottom: 6px; margin-top: 14px; }
-  .modal input, .modal textarea{ width:100%; background: var(--panel-2); border:1px solid var(--line); color: var(--text); padding: 10px 12px; border-radius: 8px; font-family:'Archivo', sans-serif; font-size: 14px; resize: vertical; }
+  .modal input, .modal textarea, .modal select{ width:100%; background: var(--panel-2); border:1px solid var(--line); color: var(--text); padding: 10px 12px; border-radius: 8px; font-family:'Archivo', sans-serif; font-size: 14px; resize: vertical; }
   .modal textarea{ min-height: 70px; }
   .modal-actions{ display:flex; gap: 10px; margin-top: 22px; }
   .btn-primary{ flex:1; background: var(--amber); color: #241705; border:none; padding: 12px; border-radius: 9px; font-weight:800; cursor:pointer; font-family:'Archivo',sans-serif; font-size: 14px; }
@@ -114,6 +119,15 @@
     <textarea id="wiSummary" placeholder="e.g. 2 x Lamb Mandi Meal, 1 x Butter Naan"></textarea>
     <label>Total Price (AUD)</label>
     <input id="wiPrice" type="number" step="0.01" placeholder="e.g. 70">
+    <label>Phone Number</label>
+    <input id="wiPhone" placeholder="e.g. 04XX XXX XXX">
+    <label>Order Type</label>
+    <select id="wiOrderType" onchange="toggleArrivalField()">
+      <option value="Pickup">Pickup</option>
+      <option value="Dine-in">Dine-in</option>
+    </select>
+    <label id="wiArrivalLabel">Estimated Pickup Time</label>
+    <input id="wiArrival" placeholder="e.g. 20 minutes / 7:00 PM">
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeWalkinModal()">Cancel</button>
       <button class="btn-primary" id="wiSubmitBtn" onclick="submitWalkin()">Add Order</button>
@@ -198,12 +212,22 @@
 
   function openWalkinModal(){
     document.getElementById('walkinModal').classList.add('show');
+    toggleArrivalField();
   }
   function closeWalkinModal(){
     document.getElementById('walkinModal').classList.remove('show');
     document.getElementById('wiName').value = '';
     document.getElementById('wiSummary').value = '';
     document.getElementById('wiPrice').value = '';
+    document.getElementById('wiPhone').value = '';
+    document.getElementById('wiOrderType').value = 'Pickup';
+    document.getElementById('wiArrival').value = '';
+  }
+
+  function toggleArrivalField(){
+    const isPickup = document.getElementById('wiOrderType').value === 'Pickup';
+    document.getElementById('wiArrivalLabel').style.display = isPickup ? 'block' : 'none';
+    document.getElementById('wiArrival').style.display = isPickup ? 'block' : 'none';
   }
 
   async function submitWalkin(){
@@ -211,6 +235,9 @@
     const name = document.getElementById('wiName').value.trim() || 'Walk-in Customer';
     const summary = document.getElementById('wiSummary').value.trim();
     const price = document.getElementById('wiPrice').value.trim();
+    const phone = document.getElementById('wiPhone').value.trim();
+    const orderType = document.getElementById('wiOrderType').value;
+    const arrival = orderType === 'Pickup' ? document.getElementById('wiArrival').value.trim() : '';
 
     if (!summary || !price){
       alert('Please fill in the order summary and total price.');
@@ -228,6 +255,9 @@
           customer_name: name,
           order_summary: summary,
           total_price: price,
+          phone_number: phone,
+          order_type: orderType,
+          arrival_time: arrival,
           source: 'Walk-in'
         })
       });
@@ -258,13 +288,24 @@
     pill.textContent = orders.length + ' NEW';
     startBeeping();
 
-    grid.innerHTML = orders.map(o => `
+    grid.innerHTML = orders.map(o => {
+      const orderType = o['Order Type'] || '';
+      const badgeClass = orderType.toLowerCase() === 'dine-in' ? 'dinein' : 'pickup';
+      const badgeText = orderType || 'Pickup';
+      const arrival = o['Table/Arrival'] || '';
+      const phone = o['Phone Number'] || '';
+      return `
       <div class="card">
         <div class="card-top">
           <span class="order-id">${o['Order id'] || ''}</span>
           <span class="elapsed">${elapsedText(o['Timestamp'])}</span>
         </div>
         <div class="customer">${o['Customer Name'] || 'Customer'}</div>
+        ${phone ? `<div class="phone-line">📞 ${phone}</div>` : ''}
+        <div class="badge-row">
+          <span class="badge ${badgeClass}">${badgeText}</span>
+          ${arrival ? `<span class="badge pickup">ETA: ${arrival}</span>` : ''}
+        </div>
         <div class="summary">${o['Order Summary'] || ''}</div>
         <div class="meta-row">
           <span class="price">$${o['Total Price'] || '0'}</span>
@@ -272,7 +313,7 @@
         </div>
         <button class="ack-btn" onclick="ackOrder('${o['Order id']}', this)">Acknowledge</button>
       </div>
-    `).join('');
+    `;}).join('');
   }
 
   async function fetchOrders(){

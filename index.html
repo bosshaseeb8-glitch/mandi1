@@ -363,8 +363,9 @@
 
       // add new pending orders / refresh unacknowledged ones; never overwrite
       // a card the staff already acknowledged locally
-      incoming.forEach(o => {
+       incoming.forEach(o => {
         const id = o['Order id'];
+        if (!id) return;
         if (!ordersState[id] || !ordersState[id].acknowledged){
           ordersState[id] = { data: o, acknowledged: false };
         }

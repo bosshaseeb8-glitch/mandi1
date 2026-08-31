@@ -34,19 +34,20 @@
   .count-pill.show{ display:inline-block; }
   .add-btn{ background: var(--amber); color: #241705; border:none; padding: 10px 18px; border-radius: 8px; font-weight: 800; font-size: 14px; cursor:pointer; font-family:'Archivo', sans-serif; }
   .add-btn:hover{ opacity: 0.9; }
-  .print-btn{ background: var(--panel-2); color: var(--text); border:1px solid var(--line); padding: 10px 18px; border-radius: 8px; font-weight: 800; font-size: 14px; cursor:pointer; font-family:'Archivo', sans-serif; display:flex; align-items:center; gap:7px; }
-  .print-btn:hover{ background: var(--panel); border-color: var(--amber); color: var(--amber); }
+  .nalli-toggle{ display:flex; align-items:center; gap: 9px; font-family:'Roboto Mono', monospace; font-size: 12.5px; color: var(--text-dim); background: var(--panel); border:1px solid var(--line); padding: 8px 14px; border-radius: 999px; }
+  .toggle-switch{ position:relative; width:40px; height:22px; border-radius:999px; border:none; background: var(--green); cursor:pointer; padding:0; transition: background 0.15s ease; }
+  .toggle-switch.off{ background: var(--text-mute); }
+  .toggle-knob{ position:absolute; top:2px; left:20px; width:18px; height:18px; border-radius:50%; background:#fff; transition: left 0.15s ease; }
+  .toggle-switch.off .toggle-knob{ left:2px; }
+  .toggle-switch:disabled{ opacity:0.5; cursor:default; }
+  #nalliToggleLabel.off{ color: var(--red); }
   .empty{ text-align:center; padding: 90px 20px; color: var(--text-mute); }
   .empty .big{ font-size: 44px; margin-bottom: 10px; }
   .empty p{ font-family:'Roboto Mono', monospace; font-size: 13px; letter-spacing:0.04em; }
   .orders{ display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
-  .card{ position:relative; background: var(--panel); border: 2px solid var(--red); border-radius: 14px; padding: 18px 18px 16px; box-shadow: 0 0 0 4px var(--red-glow); animation: pulse 1.4s ease-in-out infinite; }
+  .card{ background: var(--panel); border: 2px solid var(--red); border-radius: 14px; padding: 18px 18px 16px; box-shadow: 0 0 0 4px var(--red-glow); animation: pulse 1.4s ease-in-out infinite; }
   @keyframes pulse{ 0%, 100%{ box-shadow: 0 0 0 4px var(--red-glow); } 50%{ box-shadow: 0 0 0 10px transparent; } }
-  .card.acked{ border-color: var(--green); box-shadow: none; animation: none; opacity: 0.88; }
-  .remove-btn{ position:absolute; top:10px; right:10px; width:24px; height:24px; border-radius:50%; border:1px solid var(--line); background: var(--panel-2); color: var(--text-dim); font-family:'Roboto Mono', monospace; font-size:13px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
-  .remove-btn:hover{ background: var(--red); color:#1a0f0c; border-color: var(--red); }
-  .acked-label{ text-align:center; padding: 11px; border-radius: 9px; border: 1px solid var(--green); color: var(--green); font-weight: 800; font-size: 13.5px; letter-spacing: 0.03em; font-family:'Archivo', sans-serif; }
-  .card-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px; padding-right: 26px; }
+  .card-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px; }
   .order-id{ font-family:'Roboto Mono', monospace; font-weight:700; font-size: 15px; color: var(--amber); }
   .elapsed{ font-family:'Roboto Mono', monospace; font-size: 12px; color: var(--text-mute); }
   .customer{ font-size: 17px; font-weight: 700; margin-bottom: 6px; }
@@ -78,35 +79,6 @@
   .modal-actions{ display:flex; gap: 10px; margin-top: 22px; }
   .btn-primary{ flex:1; background: var(--amber); color: #241705; border:none; padding: 12px; border-radius: 9px; font-weight:800; cursor:pointer; font-family:'Archivo',sans-serif; font-size: 14px; }
   .btn-secondary{ flex:1; background: transparent; color: var(--text-dim); border:1px solid var(--line); padding: 12px; border-radius: 9px; font-weight:700; cursor:pointer; font-family:'Archivo',sans-serif; font-size: 14px; }
-
-  /* ---- Print styles ---- */
-  @media print{
-    body{ background:#fff; color:#000; padding: 0; }
-    .right-controls .add-btn,
-    .right-controls .print-btn,
-    .right-controls .status,
-    .remove-btn,
-    .ack-btn,
-    .modal-overlay,
-    #setupScreen{ display:none !important; }
-    header{ border-bottom: 2px solid #000; margin-bottom: 14px; }
-    .brand h1{ color:#000; }
-    .brand span{ color:#333; }
-    .orders{ display:block; }
-    .card{ background:#fff; color:#000; border: 1.5px solid #000; box-shadow:none !important; animation:none !important; break-inside: avoid; page-break-inside: avoid; margin-bottom: 12px; padding: 14px 16px; }
-    .card.acked{ border-color:#000; opacity:1; }
-    .order-id{ color:#000; }
-    .elapsed{ color:#444; }
-    .customer{ color:#000; }
-    .summary{ color:#111; }
-    .price{ color:#000; }
-    .source{ background:#eee; color:#000; border:1px solid #ccc; }
-    .badge{ border:1px solid #000 !important; background:#fff !important; color:#000 !important; }
-    .badge-row{ margin-bottom: 8px; }
-    .phone-line{ color:#111; }
-    .acked-label{ border-color:#000; color:#000; }
-    .empty{ display:none !important; }
-  }
 </style>
 </head>
 <body>
@@ -117,8 +89,14 @@
     <span>ORDER BOARD</span>
   </div>
   <div class="right-controls">
+    <div class="nalli-toggle" id="nalliToggleWrap" style="display:none;">
+      <span>Nalli Biryani</span>
+      <button class="toggle-switch" id="nalliToggleBtn" onclick="toggleNalli()">
+        <span class="toggle-knob"></span>
+      </button>
+      <span id="nalliToggleLabel">Available</span>
+    </div>
     <button class="add-btn" onclick="openWalkinModal()">+ Walk-in Order</button>
-    <button class="print-btn" onclick="window.print()" title="Print current orders">🖨 Print</button>
     <span class="count-pill" id="countPill">0 NEW</span>
     <div class="status">
       <span class="dot" id="statusDot"></span>
@@ -136,6 +114,10 @@
   <input id="urlAck" placeholder="https://yourinstance.app.n8n.cloud/webhook/mandi1-acknowledge-order">
   <label>Place order URL (POST) — same one ElevenLabs uses</label>
   <input id="urlOrders" placeholder="https://yourinstance.app.n8n.cloud/webhook/mandi1-orders">
+  <label>Nalli Biryani status URL (GET)</label>
+  <input id="urlNalliStatus" placeholder="https://yourinstance.app.n8n.cloud/webhook/mandi1-nalli-status">
+  <label>Nalli Biryani toggle URL (POST)</label>
+  <input id="urlNalliToggle" placeholder="https://yourinstance.app.n8n.cloud/webhook/mandi1-nalli-toggle">
   <button onclick="saveConfig()">Save & Start</button>
 </div>
 
@@ -176,10 +158,11 @@
   let PENDING_URL = localStorage.getItem('mandi1_pending_url') || '';
   let ACK_URL = localStorage.getItem('mandi1_ack_url') || '';
   let ORDERS_URL = localStorage.getItem('mandi1_orders_url') || '';
+  let NALLI_STATUS_URL = localStorage.getItem('mandi1_nalli_status_url') || '';
+  let NALLI_TOGGLE_URL = localStorage.getItem('mandi1_nalli_toggle_url') || '';
   let beeping = false;
   let audioCtx = null;
   let beepInterval = null;
-  let ordersState = {}; // orderId -> { data, acknowledged }
 
   function initAudio(){
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -215,12 +198,55 @@
     PENDING_URL = document.getElementById('urlPending').value.trim();
     ACK_URL = document.getElementById('urlAck').value.trim();
     ORDERS_URL = document.getElementById('urlOrders').value.trim();
+    NALLI_STATUS_URL = document.getElementById('urlNalliStatus').value.trim();
+    NALLI_TOGGLE_URL = document.getElementById('urlNalliToggle').value.trim();
     localStorage.setItem('mandi1_pending_url', PENDING_URL);
     localStorage.setItem('mandi1_ack_url', ACK_URL);
     localStorage.setItem('mandi1_orders_url', ORDERS_URL);
+    localStorage.setItem('mandi1_nalli_status_url', NALLI_STATUS_URL);
+    localStorage.setItem('mandi1_nalli_toggle_url', NALLI_TOGGLE_URL);
     document.getElementById('setupScreen').style.display = 'none';
     initAudio();
     fetchOrders();
+    fetchNalliStatus();
+  }
+
+  async function fetchNalliStatus(){
+    if (!NALLI_STATUS_URL) return;
+    try{
+      const res = await fetch(NALLI_STATUS_URL + '?t=' + Date.now(), { cache: 'no-store' });
+      const data = await res.json();
+      renderNalliToggle(data.available);
+    }catch(e){ /* leave as-is on failure */ }
+  }
+
+  function renderNalliToggle(available){
+    const wrap = document.getElementById('nalliToggleWrap');
+    const btn = document.getElementById('nalliToggleBtn');
+    const label = document.getElementById('nalliToggleLabel');
+    wrap.style.display = 'flex';
+    btn.classList.toggle('off', !available);
+    btn.dataset.available = available ? '1' : '0';
+    label.textContent = available ? 'Available' : 'Sold Out';
+    label.classList.toggle('off', !available);
+  }
+
+  async function toggleNalli(){
+    const btn = document.getElementById('nalliToggleBtn');
+    const current = btn.dataset.available === '1';
+    const next = !current;
+    btn.disabled = true;
+    try{
+      await fetch(NALLI_TOGGLE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ available: next })
+      });
+      renderNalliToggle(next);
+    }catch(e){
+      alert('Could not update Nalli Biryani status. Check connection and try again.');
+    }
+    btn.disabled = false;
   }
 
   function elapsedText(timestamp){
@@ -240,17 +266,11 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order_id: orderId })
       });
-      if (ordersState[orderId]) ordersState[orderId].acknowledged = true;
-      renderAll();
+      fetchOrders();
     }catch(e){
       btn.disabled = false;
       btn.textContent = 'Acknowledge — try again';
     }
-  }
-
-  function removeCard(orderId){
-    delete ordersState[orderId];
-    renderAll();
   }
 
   function openWalkinModal(){
@@ -313,16 +333,12 @@
     btn.textContent = 'Add Order';
   }
 
-  function renderAll(){
-    render(Object.values(ordersState));
-  }
-
-  function render(entries){
+  function render(orders){
     const grid = document.getElementById('ordersGrid');
     const empty = document.getElementById('emptyState');
     const pill = document.getElementById('countPill');
 
-    if (!entries || entries.length === 0){
+    if (!orders || orders.length === 0){
       grid.innerHTML = '';
       empty.style.display = 'block';
       pill.classList.remove('show');
@@ -331,30 +347,20 @@
     }
 
     empty.style.display = 'none';
-    const pendingCount = entries.filter(e => !e.acknowledged).length;
-    if (pendingCount > 0){
-      pill.classList.add('show');
-      pill.textContent = pendingCount + ' NEW';
-      startBeeping();
-    } else {
-      pill.classList.remove('show');
-      stopBeeping();
-    }
+    pill.classList.add('show');
+    pill.textContent = orders.length + ' NEW';
+    startBeeping();
 
-    grid.innerHTML = entries.map(entry => {
-      const o = entry.data;
-      const id = o['Order id'] || '';
-      const acked = entry.acknowledged;
+    grid.innerHTML = orders.map(o => {
       const orderType = o['Order Type'] || '';
       const badgeClass = orderType.toLowerCase() === 'dine-in' ? 'dinein' : 'pickup';
       const badgeText = orderType || 'Pickup';
       const arrival = o['Table/Arrival'] || '';
       const phone = o['Phone Number'] || '';
       return `
-      <div class="card ${acked ? 'acked' : ''}">
-        <button class="remove-btn" onclick="removeCard('${id}')" title="Remove from board">✕</button>
+      <div class="card">
         <div class="card-top">
-          <span class="order-id">${id}</span>
+          <span class="order-id">${o['Order id'] || ''}</span>
           <span class="elapsed">${elapsedText(o['Timestamp'])}</span>
         </div>
         <div class="customer">${o['Customer Name'] || 'Customer'}</div>
@@ -368,9 +374,7 @@
           <span class="price">$${o['Total Price'] || '0'}</span>
           <span class="source">${o['Source'] || ''}</span>
         </div>
-        ${acked
-          ? `<div class="acked-label">✓ Acknowledged</div>`
-          : `<button class="ack-btn" onclick="ackOrder('${id}', this)">Acknowledge</button>`}
+        <button class="ack-btn" onclick="ackOrder('${o['Order id']}', this)">Acknowledge</button>
       </div>
     `;}).join('');
   }
@@ -383,27 +387,7 @@
       const data = await res.json();
       dot.classList.remove('offline');
       txt.textContent = 'live';
-
-      const incoming = data.orders || [];
-      const incomingIds = new Set(incoming.map(o => o['Order id']));
-
-      // drop cards that are no longer pending on the backend AND were never
-      // acknowledged/removed locally (e.g. cancelled elsewhere)
-      Object.keys(ordersState).forEach(id => {
-        if (!ordersState[id].acknowledged && !incomingIds.has(id)) delete ordersState[id];
-      });
-
-      // add new pending orders / refresh unacknowledged ones; never overwrite
-      // a card the staff already acknowledged locally
-       incoming.forEach(o => {
-        const id = o['Order id'];
-        if (!id) return;
-        if (!ordersState[id] || !ordersState[id].acknowledged){
-          ordersState[id] = { data: o, acknowledged: false };
-        }
-      });
-
-      renderAll();
+      render(data.orders || []);
     }catch(e){
       dot.classList.add('offline');
       txt.textContent = 'connection lost';
@@ -412,14 +396,19 @@
 
   window.addEventListener('click', () => { if (!audioCtx) initAudio(); }, { once: true });
 
-  if (!PENDING_URL || !ACK_URL || !ORDERS_URL){
+  if (!PENDING_URL || !ACK_URL || !ORDERS_URL || !NALLI_STATUS_URL || !NALLI_TOGGLE_URL){
     document.getElementById('setupScreen').style.display = 'block';
     document.getElementById('urlPending').value = PENDING_URL;
     document.getElementById('urlAck').value = ACK_URL;
     document.getElementById('urlOrders').value = ORDERS_URL;
+    document.getElementById('urlNalliStatus').value = NALLI_STATUS_URL;
+    document.getElementById('urlNalliToggle').value = NALLI_TOGGLE_URL;
   } else {
     fetchOrders();
+    fetchNalliStatus();
   }
+
+  setInterval(() => { if (NALLI_STATUS_URL) fetchNalliStatus(); }, 15000);
 
   setInterval(() => { if (PENDING_URL) fetchOrders(); }, POLL_INTERVAL_MS);
 </script>

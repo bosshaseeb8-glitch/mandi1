@@ -45,9 +45,16 @@
   .empty .big{ font-size: 44px; margin-bottom: 10px; }
   .empty p{ font-family:'Roboto Mono', monospace; font-size: 13px; letter-spacing:0.04em; }
   .orders{ display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
-  .card{ background: var(--panel); border: 2px solid var(--red); border-radius: 14px; padding: 18px 18px 16px; box-shadow: 0 0 0 4px var(--red-glow); animation: pulse 1.4s ease-in-out infinite; }
+  .card{ position:relative; background: var(--panel); border: 2px solid var(--red); border-radius: 14px; padding: 18px 18px 16px; box-shadow: 0 0 0 4px var(--red-glow); animation: pulse 1.4s ease-in-out infinite; }
   @keyframes pulse{ 0%, 100%{ box-shadow: 0 0 0 4px var(--red-glow); } 50%{ box-shadow: 0 0 0 10px transparent; } }
-  .card-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px; }
+  .card.acked{ border-color: var(--green); box-shadow: none; animation: none; opacity: 0.9; }
+  .remove-btn{ position:absolute; top:10px; right:10px; width:24px; height:24px; border-radius:50%; border:1px solid var(--line); background: var(--panel-2); color: var(--text-dim); font-family:'Roboto Mono', monospace; font-size:13px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .remove-btn:hover{ background: var(--red); color:#1a0f0c; border-color: var(--red); }
+  .card-actions{ display:flex; gap: 8px; }
+  .print-btn{ flex:0 0 auto; padding: 12px 14px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text-dim); font-weight:700; font-size: 13px; cursor:pointer; font-family:'Archivo', sans-serif; }
+  .print-btn:hover{ color: var(--text); border-color: var(--text-dim); }
+  .acked-label{ flex:1; text-align:center; padding: 11px; border-radius: 9px; border: 1px solid var(--green); color: var(--green); font-weight: 800; font-size: 13.5px; letter-spacing: 0.03em; font-family:'Archivo', sans-serif; }
+  .card-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px; padding-right: 26px; }
   .order-id{ font-family:'Roboto Mono', monospace; font-weight:700; font-size: 15px; color: var(--amber); }
   .elapsed{ font-family:'Roboto Mono', monospace; font-size: 12px; color: var(--text-mute); }
   .customer{ font-size: 17px; font-weight: 700; margin-bottom: 6px; }
@@ -160,6 +167,7 @@
   let ORDERS_URL = localStorage.getItem('mandi1_orders_url') || '';
   let NALLI_STATUS_URL = localStorage.getItem('mandi1_nalli_status_url') || '';
   let NALLI_TOGGLE_URL = localStorage.getItem('mandi1_nalli_toggle_url') || '';
+  let ordersState = {}; // orderId -> { data, acknowledged }
   let beeping = false;
   let audioCtx = null;
   let beepInterval = null;
@@ -266,11 +274,51 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order_id: orderId })
       });
-      fetchOrders();
+      if (ordersState[orderId]) ordersState[orderId].acknowledged = true;
+      renderAll();
     }catch(e){
       btn.disabled = false;
       btn.textContent = 'Acknowledge — try again';
     }
+  }
+
+  function removeCard(orderId){
+    delete ordersState[orderId];
+    renderAll();
+  }
+
+  function printOrder(orderId){
+    const entry = ordersState[orderId];
+    if (!entry) return;
+    const o = entry.data;
+    const win = window.open('', '_blank', 'width=380,height=600');
+    win.document.write(`
+      <html><head><title>Order ${o['Order id'] || ''}</title>
+      <style>
+        body{ font-family: monospace; padding: 16px; font-size: 14px; color:#000; }
+        h2{ margin-bottom: 4px; }
+        .line{ margin: 4px 0; }
+        hr{ border: none; border-top: 1px dashed #000; margin: 10px 0; }
+      </style>
+      </head><body>
+        <h2>MANDI-1</h2>
+        <div class="line"><strong>Order:</strong> ${o['Order id'] || ''}</div>
+        <div class="line"><strong>Time:</strong> ${o['Timestamp'] || ''}</div>
+        <hr>
+        <div class="line"><strong>Customer:</strong> ${o['Customer Name'] || ''}</div>
+        ${o['Phone Number'] ? `<div class="line"><strong>Phone:</strong> ${o['Phone Number']}</div>` : ''}
+        <div class="line"><strong>Type:</strong> ${o['Order Type'] || ''}</div>
+        ${o['Table/Arrival'] ? `<div class="line"><strong>Time:</strong> ${o['Table/Arrival']}</div>` : ''}
+        <hr>
+        <div class="line">${(o['Order Summary'] || '').replace(/\n/g, '<br>')}</div>
+        <hr>
+        <div class="line"><strong>Total:</strong> $${o['Total Price'] || '0'}</div>
+        <div class="line"><strong>Source:</strong> ${o['Source'] || ''}</div>
+      </body></html>
+    `);
+    win.document.close();
+    win.focus();
+    win.print();
   }
 
   function openWalkinModal(){
@@ -333,12 +381,16 @@
     btn.textContent = 'Add Order';
   }
 
-  function render(orders){
+  function renderAll(){
+    render(Object.values(ordersState));
+  }
+
+  function render(entries){
     const grid = document.getElementById('ordersGrid');
     const empty = document.getElementById('emptyState');
     const pill = document.getElementById('countPill');
 
-    if (!orders || orders.length === 0){
+    if (!entries || entries.length === 0){
       grid.innerHTML = '';
       empty.style.display = 'block';
       pill.classList.remove('show');
@@ -347,20 +399,30 @@
     }
 
     empty.style.display = 'none';
-    pill.classList.add('show');
-    pill.textContent = orders.length + ' NEW';
-    startBeeping();
+    const pendingCount = entries.filter(e => !e.acknowledged).length;
+    if (pendingCount > 0){
+      pill.classList.add('show');
+      pill.textContent = pendingCount + ' NEW';
+      startBeeping();
+    } else {
+      pill.classList.remove('show');
+      stopBeeping();
+    }
 
-    grid.innerHTML = orders.map(o => {
+    grid.innerHTML = entries.map(entry => {
+      const o = entry.data;
+      const id = o['Order id'] || '';
+      const acked = entry.acknowledged;
       const orderType = o['Order Type'] || '';
       const badgeClass = orderType.toLowerCase() === 'dine-in' ? 'dinein' : 'pickup';
       const badgeText = orderType || 'Pickup';
       const arrival = o['Table/Arrival'] || '';
       const phone = o['Phone Number'] || '';
       return `
-      <div class="card">
+      <div class="card ${acked ? 'acked' : ''}">
+        <button class="remove-btn" onclick="removeCard('${id}')" title="Remove from board">✕</button>
         <div class="card-top">
-          <span class="order-id">${o['Order id'] || ''}</span>
+          <span class="order-id">${id}</span>
           <span class="elapsed">${elapsedText(o['Timestamp'])}</span>
         </div>
         <div class="customer">${o['Customer Name'] || 'Customer'}</div>
@@ -374,7 +436,12 @@
           <span class="price">$${o['Total Price'] || '0'}</span>
           <span class="source">${o['Source'] || ''}</span>
         </div>
-        <button class="ack-btn" onclick="ackOrder('${o['Order id']}', this)">Acknowledge</button>
+        <div class="card-actions">
+          ${acked
+            ? `<div class="acked-label">✓ Acknowledged</div>`
+            : `<button class="ack-btn" onclick="ackOrder('${id}', this)">Acknowledge</button>`}
+          <button class="print-btn" onclick="printOrder('${id}')" title="Print order">🖨</button>
+        </div>
       </div>
     `;}).join('');
   }
@@ -387,7 +454,24 @@
       const data = await res.json();
       dot.classList.remove('offline');
       txt.textContent = 'live';
-      render(data.orders || []);
+
+      const incoming = (data.orders || []).filter(o => o && o['Order id']);
+      const incomingIds = new Set(incoming.map(o => o['Order id']));
+
+      // drop cards no longer pending on the backend that were never acknowledged/kept locally
+      Object.keys(ordersState).forEach(id => {
+        if (!ordersState[id].acknowledged && !incomingIds.has(id)) delete ordersState[id];
+      });
+
+      // add new pending orders; never overwrite a card staff already acknowledged locally
+      incoming.forEach(o => {
+        const id = o['Order id'];
+        if (!ordersState[id] || !ordersState[id].acknowledged){
+          ordersState[id] = { data: o, acknowledged: false };
+        }
+      });
+
+      renderAll();
     }catch(e){
       dot.classList.add('offline');
       txt.textContent = 'connection lost';

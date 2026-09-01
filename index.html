@@ -96,6 +96,7 @@
     <span>ORDER BOARD</span>
   </div>
   <div class="right-controls">
+    <button class="add-btn" id="soundBtn" onclick="enableSound()" style="background:var(--red);">🔇 Enable Sound</button>
     <div class="nalli-toggle" id="nalliToggleWrap" style="display:none;">
       <span>Nalli Biryani</span>
       <button class="toggle-switch" id="nalliToggleBtn" onclick="toggleNalli()">
@@ -174,10 +175,21 @@
 
   function initAudio(){
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function enableSound(){
+    initAudio();
+    playBeepOnce();
+    const btn = document.getElementById('soundBtn');
+    btn.textContent = '🔊 Sound On';
+    btn.style.background = 'var(--green)';
+    btn.disabled = true;
   }
 
   function playBeepOnce(){
     if (!audioCtx) return;
+    if (audioCtx.state === 'suspended') { audioCtx.resume(); }
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = 'square';
